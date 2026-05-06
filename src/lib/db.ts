@@ -24,9 +24,13 @@ const db = {
       }
       return [];
     },
-    get: (id: number) => {
+    get: (id: number | string) => {
+      const numId = typeof id === 'string' ? parseInt(id) : id;
       if (query.includes('products')) {
-        return STATIC_PRODUCTS.find(p => p.id === id);
+        return STATIC_PRODUCTS.find(p => p.id === numId);
+      }
+      if (query.includes('sales')) {
+        return sales.find(s => s.id === numId);
       }
       return undefined;
     },
@@ -48,9 +52,21 @@ const db = {
           created_at: new Date().toISOString(),
         };
         sales.unshift(newSale);
-        return { lastInsertRowid: newSale.id };
+        return { lastInsertRowid: newSale.id, changes: 1 };
       }
-      return { lastInsertRowid: 0 };
+      if (query.includes('DELETE FROM products')) {
+        const [id] = args;
+        const idx = STATIC_PRODUCTS.findIndex(p => p.id === Number(id));
+        if (idx !== -1) {
+          STATIC_PRODUCTS.splice(idx, 1);
+          return { lastInsertRowid: 0, changes: 1 };
+        }
+        return { lastInsertRowid: 0, changes: 0 };
+      }
+      if (query.includes('INSERT INTO products')) {
+        return { lastInsertRowid: STATIC_PRODUCTS.length + 1, changes: 1 };
+      }
+      return { lastInsertRowid: 0, changes: 0 };
     },
   }),
 };
