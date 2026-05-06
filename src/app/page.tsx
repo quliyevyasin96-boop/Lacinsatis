@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Product {
   id: number;
@@ -21,7 +21,7 @@ export default function Home() {
   const [sdkReady, setSdkReady] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<number | ''>('');
+  const [selectedProduct, setSelectedProduct] = useState<number>(0);
   const [quantity, setQuantity] = useState(1);
   const [giftQuantity, setGiftQuantity] = useState(0);
   const [customerName, setCustomerName] = useState('');
@@ -33,31 +33,38 @@ export default function Home() {
   const [result, setResult] = useState<SaleResult | null>(null);
   const [error, setError] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Check if Telegram SDK is loaded
+  // Telegram SDK initialization
   useEffect(() => {
-    const checkTelegram = setInterval(() => {
-      if (window.Telegram?.WebApp) {
-        clearInterval(checkTelegram);
-        const tg = window.Telegram.WebApp;
+    const tg = (window as any).Telegram?.WebApp;
+    
+    const init = () => {
+      if (tg) {
         tg.ready();
         tg.expand();
         setDarkMode(tg.colorScheme === 'dark');
-        setSdkReady(true);
       }
-    }, 100);
-
-    // Fallback: if not in Telegram, still show the app
-    const fallbackTimer = setTimeout(() => {
-      clearInterval(checkTelegram);
       setSdkReady(true);
-    }, 3000);
-
-    return () => {
-      clearInterval(checkTelegram);
-      clearTimeout(fallbackTimer);
     };
+
+    if (tg) {
+      init();
+    } else {
+      // Wait for SDK to load
+      const check = setInterval(() => {
+        const tgCheck = (window as any).Telegram?.WebApp;
+        if (tgCheck) {
+          clearInterval(check);
+          init();
+        }
+      }, 100);
+      
+      // Fallback after 3 seconds
+      setTimeout(() => {
+        clearInterval(check);
+        if (!sdkReady) init();
+      }, 3000);
+    }
   }, []);
 
   useEffect(() => {
@@ -80,7 +87,8 @@ export default function Home() {
   function getLocation() {
     setLocationLoading(true);
     
-    const tg = window.Telegram?.WebApp;
+    const tg = (window as any).Telegram?.WebApp;
+    
     if (tg?.locationManager) {
       tg.locationManager.getLocation((loc: any) => {
         setLocation({ lat: loc.latitude, lon: loc.longitude });
@@ -139,17 +147,9 @@ export default function Home() {
       setResult(data);
       setShowResult(true);
 
-      const tg = window.Telegram?.WebApp;
+      const tg = (window as any).Telegram?.WebApp;
       if (tg?.hapticFeedback) tg.hapticFeedback.notification('success');
       
-      // Generate QR Code
-      setTimeout(() => {
-        const canvas = canvasRef.current;
-        if (canvas && (window as any).QRCode) {
-          const baseUrl = window.location.origin;
-          (window as any).QRCode.toCanvas(canvas, `${baseUrl}/api/sales/${data.id}`, { width: 160 });
-        }
-      }, 200);
     } catch {
       setError('Xəta baş verdi. Yenidən cəhd edin.');
     } finally {
@@ -162,18 +162,18 @@ export default function Home() {
     setResult(null);
     setCustomerName('');
     setCustomerPhone('');
-    setSelectedProduct('');
+    setSelectedProduct(0);
     setQuantity(1);
     setGiftQuantity(0);
     setLocation(null);
   }
 
-  // Show loading while Telegram SDK initializes
+  // Loading state
   if (!sdkReady) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl animate-pulse">
+          <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
             🍞
           </div>
           <p className="text-gray-500">Yüklənir...</p>
@@ -192,33 +192,34 @@ export default function Home() {
   const total = getTotal();
   const selectedProductData = products.find(p => p.id === selectedProduct);
 
+  // Result screen
   if (showResult && result) {
     return (
       <main className={`min-h-screen ${bg} p-4 pb-24`}>
         <div className="text-center pt-6">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-green-400 flex items-center justify-center mx-auto mb-5">
-            <span className="text-4xl">✓</span>
+            <span className="text-4xl text-white">✓</span>
           </div>
           <h2 className={`text-2xl font-bold ${text}`}>Uğurlu Əməliyyat!</h2>
           <p className={`${muted} mt-1`}>Satış qeydə alındı</p>
         </div>
 
         <div className={`${cardBg} rounded-2xl p-4 mt-6 border ${border}`}>
-          <div className="flex justify-between py-3 border-b border-[#e5e5e5]">
+          <div className={`flex justify-between py-3 border-b ${border}`}>
             <span className={muted}>Müştəri</span>
-            <span className="font-semibold">{result.customer_name}</span>
+            <span className={`font-semibold ${text}`}>{result.customer_name}</span>
           </div>
-          <div className="flex justify-between py-3 border-b border-[#e5e5e5]">
+          <div className={`flex justify-between py-3 border-b ${border}`}>
             <span className={muted}>Məhsul</span>
-            <span className="font-semibold">{result.product_name}</span>
+            <span className={`font-semibold ${text}`}>{result.product_name}</span>
           </div>
-          <div className="flex justify-between py-3 border-b border-[#e5e5e5]">
+          <div className={`flex justify-between py-3 border-b ${border}`}>
             <span className={muted}>Miqdar</span>
-            <span className="font-semibold">{result.quantity} ədəd</span>
+            <span className={`font-semibold ${text}`}>{result.quantity} ədəd</span>
           </div>
-          <div className="flex justify-between py-3 border-b border-[#e5e5e5]">
+          <div className={`flex justify-between py-3 border-b ${border}`}>
             <span className={muted}>Hədiyyə</span>
-            <span className="font-semibold">{result.gift_quantity} ədəd</span>
+            <span className={`font-semibold ${text}`}>{result.gift_quantity} ədəd</span>
           </div>
           <div className="flex justify-between py-3 pt-4">
             <span className={muted}>Cəm Məbləğ</span>
@@ -226,16 +227,19 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="text-center mt-5">
-          <div className="bg-white rounded-2xl p-5 inline-block">
-            <canvas ref={canvasRef}></canvas>
+        <div className="text-center mt-6">
+          <p className={`text-sm ${muted} mb-3`}>QR Kod - ID: #{result.id}</p>
+          <div className={`${cardBg} rounded-2xl p-5 inline-block border ${border}`}>
+            <div className="w-32 h-32 bg-gray-200 flex items-center justify-center rounded-lg">
+              <span className={`text-sm ${muted}`}>QR Kod</span>
+            </div>
           </div>
           <p className={`text-xs ${muted} mt-3`}>Skan edərək məlumatları görün</p>
         </div>
 
         <button
           onClick={resetForm}
-          className="w-full bg-gradient-to-r from-orange-500 to-orange-400 text-white font-semibold py-4 rounded-2xl mt-6 active:scale-95 transition cursor-pointer"
+          className="w-full bg-gradient-to-r from-orange-500 to-orange-400 text-white font-semibold py-4 rounded-2xl mt-6 cursor-pointer active:scale-95 transition"
         >
           Yeni Satış
         </button>
@@ -243,6 +247,7 @@ export default function Home() {
     );
   }
 
+  // Main form
   return (
     <main className={`min-h-screen ${bg} p-4 pb-24`}>
       <div className="text-center pt-6">
@@ -260,6 +265,7 @@ export default function Home() {
       )}
 
       <div className={`${cardBg} rounded-2xl p-5 mt-4 border ${border}`}>
+        {/* Date */}
         <label className={`text-xs font-semibold uppercase tracking-wide ${muted} block mb-3`}>📅 Tarix</label>
         <input
           type="date"
@@ -268,8 +274,10 @@ export default function Home() {
           className={`w-full p-4 rounded-xl border ${border} ${inputBg} ${text} text-base cursor-pointer`}
         />
 
-        <div className="h-px bg-[#e5e5e5] my-5" />
-        <p className={`text-xs font-semibold uppercase tracking-wide ${muted} mb-3`}>Müştəri Məlumatları</p>
+        <div className={`h-px ${darkMode ? 'bg-[#2d2d44]' : 'bg-[#e5e5e5]'} my-5`} />
+        
+        {/* Customer Info */}
+        <p className={`text-xs font-semibold uppercase tracking-wide ${muted} mb-3`}>👤 Müştəri Məlumatları</p>
 
         <div className="mb-4">
           <label className={`text-sm font-medium ${muted} block mb-2`}>Müştərinin Adı *</label>
@@ -283,7 +291,7 @@ export default function Home() {
         </div>
 
         <div className="mb-4">
-          <label className={`text-sm font-medium ${muted} block mb-2`}>Mobil Nömrə</label>
+          <label className={`text-sm font-medium ${muted} block mb-2`}>📱 Mobil Nömrə</label>
           <input
             type="tel"
             placeholder="050 123 45 67"
@@ -298,7 +306,7 @@ export default function Home() {
           <button
             onClick={getLocation}
             disabled={locationLoading}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition cursor-pointer disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition disabled:opacity-50"
           >
             {locationLoading ? (
               <>
@@ -318,17 +326,19 @@ export default function Home() {
           )}
         </div>
 
-        <div className="h-px bg-[#e5e5e5] my-5" />
-        <p className={`text-xs font-semibold uppercase tracking-wide ${muted} mb-3`}>Məhsul Detalları</p>
+        <div className={`h-px ${darkMode ? 'bg-[#2d2d44]' : 'bg-[#e5e5e5]'} my-5`} />
+        
+        {/* Product Info */}
+        <p className={`text-xs font-semibold uppercase tracking-wide ${muted} mb-3`}>🍞 Məhsul Detalları</p>
 
         <div className="mb-4">
           <label className={`text-sm font-medium ${muted} block mb-2`}>Məhsul Seçin *</label>
           <select
             value={selectedProduct}
-            onChange={e => setSelectedProduct(Number(e.target.value) || '')}
+            onChange={e => setSelectedProduct(Number(e.target.value))}
             className={`w-full p-4 rounded-xl border ${border} ${inputBg} ${text} cursor-pointer`}
           >
-            <option value="">-- Məhsul seçin --</option>
+            <option value={0}>-- Məhsul seçin --</option>
             {products.map(p => (
               <option key={p.id} value={p.id}>{p.name} - {p.price} ₼</option>
             ))}
@@ -373,7 +383,7 @@ export default function Home() {
         <button
           onClick={submitSale}
           disabled={loading}
-          className="w-full bg-gradient-to-r from-orange-500 to-orange-400 text-white font-semibold py-4 rounded-2xl mt-5 flex items-center justify-center gap-2 active:scale-95 transition cursor-pointer disabled:opacity-50"
+          className="w-full bg-gradient-to-r from-orange-500 to-orange-400 text-white font-semibold py-4 rounded-2xl mt-5 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition disabled:opacity-50"
         >
           {loading ? (
             <>
