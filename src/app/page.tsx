@@ -72,6 +72,10 @@ export default function Home() {
   const [selectedReceipt, setSelectedReceipt] = useState<SaleResult | null>(null);
   const [showMarketList, setShowMarketList] = useState(false);
 
+  const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
+  const [editExpDesc, setEditExpDesc] = useState('');
+  const [editExpAmount, setEditExpAmount] = useState('');
+
   // Unikal marketlər siyahısı (yaddaş)
   const uniqueMarkets = Array.from(new Map(
     allSales
@@ -231,6 +235,26 @@ export default function Home() {
       if (res.ok) fetchExpenses();
     } catch (err) {
       setError('Silinmədi');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateExpense(id: number) {
+    if (!editExpDesc || !editExpAmount) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/expenses/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: editExpDesc, amount: parseFloat(editExpAmount) })
+      });
+      if (res.ok) {
+        setEditingExpenseId(null);
+        fetchExpenses();
+      }
+    } catch (err) {
+      setError('Xərc yenilənmədi');
     } finally {
       setLoading(false);
     }
@@ -442,16 +466,26 @@ export default function Home() {
       setError('Müştəri adı mütləqdir!');
       return;
     }
-    if (!customerPhone) {
+
+    let finalPhone = customerPhone;
+    let finalLocation = location;
+
+    if (!finalPhone || !finalLocation) {
+       const existingMarket = uniqueMarkets.find(m => m.name.toLowerCase().trim() === customerName.toLowerCase().trim());
+       if (existingMarket) {
+           if (!finalPhone) finalPhone = existingMarket.phone || '';
+           if (!finalLocation && existingMarket.lat && existingMarket.lon) {
+               finalLocation = { lat: existingMarket.lat, lon: existingMarket.lon };
+           }
+       }
+    }
+
+    if (!finalPhone) {
       setError('Müştəri telefonu mütləqdir!');
       return;
     }
-    if (!location) {
+    if (!finalLocation) {
       setError('Məkan (Lokasiya) mütləqdir! Zəhmət olmasa lokasiyanı əlavə edin.');
-      return;
-    }
-    if (basket.length === 0) {
-      setError('Səbət boşdur! Ən azı bir məhsul seçilməlidir.');
       return;
     }
     setLoading(true);
@@ -468,8 +502,8 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          date, customer_name: customerName, customer_phone: customerPhone,
-          latitude: location?.lat || null, longitude: location?.lon || null,
+          date, customer_name: customerName, customer_phone: finalPhone,
+          latitude: finalLocation?.lat || null, longitude: finalLocation?.lon || null,
           items: basket, gift_quantity: totalGiftQuantity,
           tg_user_id: tg?.initDataUnsafe?.user?.id,
           userName: userName
@@ -658,15 +692,29 @@ export default function Home() {
                 </div>
                 <div className="space-y-3">
                   {expenses.map(e => (
-                    <div key={e.id} className={`${cardBg} p-4 rounded-3xl border ${border} flex justify-between items-center`}>
-                      <div className="flex-1">
-                        <p className="font-bold">{e.description}</p>
-                        <p className="text-[10px] text-gray-400">{e.date}</p>
-                      </div>
-                      <div className="text-right flex items-center space-x-3">
-                        <p className="text-sm font-black text-red-500">-{e.amount.toFixed(2)} ₼</p>
-                        <button onClick={() => deleteExpense(e.id)} className="w-8 h-8 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-xs">✕</button>
-                      </div>
+                    <div key={e.id} className={`${cardBg} p-4 rounded-3xl border ${border} flex flex-col space-y-2`}>
+                      {editingExpenseId === e.id ? (
+                        <div className="space-y-2">
+                           <input value={editExpDesc} onChange={ev => setEditExpDesc(ev.target.value)} className={`w-full p-2 rounded-xl ${inputBg} border-2 border-transparent focus:border-orange-500 text-sm`} />
+                           <input value={editExpAmount} onChange={ev => setEditExpAmount(ev.target.value)} type="number" step="0.01" className={`w-full p-2 rounded-xl ${inputBg} border-2 border-transparent focus:border-orange-500 text-sm`} />
+                           <div className="flex space-x-2">
+                             <button onClick={() => updateExpense(e.id)} className="flex-1 bg-green-500 text-white py-2 rounded-xl text-xs font-bold active:scale-95">Yadda Saxla</button>
+                             <button onClick={() => setEditingExpenseId(null)} className="flex-1 bg-gray-500 text-white py-2 rounded-xl text-xs font-bold active:scale-95">Ləğv Et</button>
+                           </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center w-full">
+                          <div className="flex-1">
+                            <p className="font-bold">{e.description}</p>
+                            <p className="text-[10px] text-gray-400">{e.date}</p>
+                          </div>
+                          <div className="text-right flex items-center space-x-2">
+                            <p className="text-sm font-black text-red-500">-{e.amount.toFixed(2)} ₼</p>
+                            <button onClick={() => { setEditingExpenseId(e.id); setEditExpDesc(e.description); setEditExpAmount(e.amount.toString()); }} className="w-8 h-8 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center text-xs active:scale-95">✏️</button>
+                            <button onClick={() => deleteExpense(e.id)} className="w-8 h-8 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-xs active:scale-95">✕</button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -723,7 +771,6 @@ export default function Home() {
                         <p className="text-xl font-bold">#{s.id} - {s.customer_name}</p>
                         <p className="text-xs text-gray-400">{new Date(s.created_at).toLocaleTimeString()}</p>
                       </div>
-                      <p className="text-orange-500 font-bold">{s.total_amount.toFixed(2)} ₼</p>
                     </div>
                     {expandedSaleId === s.id && (
                       <div className="px-6 pb-6 space-y-4">
@@ -774,14 +821,10 @@ export default function Home() {
         {/* --- EXPEDITOR VIEW --- */}
         {role === 'expeditor' && !showResult && (
           <div className="space-y-8">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className={`${cardBg} p-6 rounded-3xl border-2 border-orange-500/10 shadow-lg`}>
                 <h3 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Bugünkü Sifariş</h3>
                 <p className="text-3xl font-black text-orange-500">{todayOrders}</p>
-              </div>
-              <div className={`${cardBg} p-6 rounded-3xl border-2 border-green-500/10 shadow-lg`}>
-                <h3 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Bugünkü Satış</h3>
-                <p className="text-2xl font-black text-green-500">{todaySalesTotal.toFixed(2)} ₼</p>
               </div>
             </div>
 
@@ -932,7 +975,10 @@ export default function Home() {
                   </div>
                   {selectedReceipt.items?.map((item, idx) => (
                     <div key={idx} className="flex justify-between text-sm py-1 border-b border-gray-100 print:border-black/5">
-                      <span className="font-medium">{item.name} x {item.quantity}</span>
+                      <span className="font-medium">
+                        {item.name} x {item.quantity}
+                        {item.gift_quantity ? <span className="text-green-600 ml-1">(+{item.gift_quantity}🎁)</span> : ''}
+                      </span>
                       <span className="font-bold">{(item.price * item.quantity).toFixed(2)} ₼</span>
                     </div>
                   ))}

@@ -223,6 +223,20 @@ const db = {
             }
             return { lastInsertRowid: 0, changes: 0 };
           }
+
+          if (query.includes('UPDATE expenses SET')) {
+            const [description, amount, id] = args;
+            const expensesJson = await redis.get<string>(EXPENSES_KEY);
+            let expenses: Expense[] = expensesJson && typeof expensesJson === 'string' ? JSON.parse(expensesJson) : (Array.isArray(expensesJson) ? expensesJson : []);
+            const idx = expenses.findIndex(e => String(e.id) === String(id));
+            if (idx !== -1) {
+              expenses[idx].description = description;
+              expenses[idx].amount = amount;
+              await redis.set(EXPENSES_KEY, JSON.stringify(expenses));
+              return { lastInsertRowid: 0, changes: 1 };
+            }
+            return { lastInsertRowid: 0, changes: 0 };
+          }
           
           if (query.includes('INSERT INTO products')) {
             const [name, price] = args;
