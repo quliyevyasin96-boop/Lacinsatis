@@ -834,8 +834,8 @@ export default function Home() {
 
         {/* Receipt Modal for History */}
         {selectedReceipt && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-6 animate-in fade-in duration-200 no-print">
-            <div className={`${cardBg} w-full max-w-sm rounded-[40px] border ${border} shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300`}>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-6 animate-in fade-in duration-200 print:bg-white print:p-0">
+            <div className={`${cardBg} w-full max-w-sm rounded-[40px] border ${border} shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300 print:shadow-none print:border-none print:max-w-full`}>
               {/* Thermal Receipt Content */}
               <div id="thermal-receipt" className="p-8 space-y-6 bg-white text-black font-mono print:p-0 print:w-full">
                 <div className="text-center space-y-2 border-b-2 border-dashed border-black/10 pb-4">
