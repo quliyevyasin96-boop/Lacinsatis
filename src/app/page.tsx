@@ -1003,13 +1003,12 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="p-4 bg-black/5 grid grid-cols-2 gap-2 no-print">
-                <button onClick={() => window.print()} className="bg-green-600 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95">🖨️ Çap Et</button>
-                <button onClick={downloadReceipt} className="bg-blue-600 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95">📥 Yüklə</button>
+              <div className="p-4 bg-black/5 flex flex-col gap-2 no-print">
+                <button onClick={() => window.print()} className="bg-green-600 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95 w-full">🖨️ Çap Et</button>
                 {role === 'admin' && (
-                  <button onClick={() => deleteSale(selectedReceipt.id)} className="bg-red-500 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95 col-span-2">❌ Sifarişi Ləğv Et (Sil)</button>
+                  <button onClick={() => deleteSale(selectedReceipt.id)} className="bg-red-500 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95 w-full">❌ Sifarişi Ləğv Et (Sil)</button>
                 )}
-                <button onClick={() => setSelectedReceipt(null)} className="bg-gray-900 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95 col-span-2">Bağla</button>
+                <button onClick={() => setSelectedReceipt(null)} className="bg-gray-900 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95 w-full">Bağla</button>
               </div>
             </div>
           </div>
@@ -1056,7 +1055,7 @@ export default function Home() {
             }
 
             /* Extra force to hide UI elements */
-            .no-print, header, footer, button, .backdrop-blur-sm {
+            .no-print, header, footer, button {
               display: none !important;
               opacity: 0 !important;
             }
