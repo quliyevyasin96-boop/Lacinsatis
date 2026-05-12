@@ -1582,7 +1582,7 @@ export default function Home() {
             <div className={`fixed bottom-0 left-0 right-0 p-6 ${bg} border-t ${border} backdrop-blur-lg bg-opacity-90 z-50`}>
               <div className="max-w-md mx-auto flex justify-between items-center">
                 <p className="text-2xl font-black text-orange-500">{getTotal().toFixed(2)} ₼</p>
-                <button onClick={submitSale} disabled={loading || basket.length === 0} className="bg-orange-500 text-white px-10 py-4 rounded-2xl font-bold shadow-xl active:scale-95 disabled:opacity-30">
+                <button onClick={submitSale} disabled={loading} className="bg-orange-500 text-white px-10 py-4 rounded-2xl font-bold shadow-xl active:scale-95 disabled:opacity-30">
                   {loading ? 'Gözləyin...' : 'Sifarişi Bitir'}
                 </button>
               </div>
