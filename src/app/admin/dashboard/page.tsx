@@ -39,6 +39,47 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedReceipt, setSelectedReceipt] = useState<Sale | null>(null);
 
+  const handlePrint = () => {
+    if (!selectedReceipt) return;
+    const allElements = document.querySelectorAll('body *');
+    const hiddenElements: { el: Element; display: string; visibility: string }[] = [];
+    allElements.forEach(el => {
+      const htmlEl = el as HTMLElement;
+      if (htmlEl.style.display !== 'none' && htmlEl.style.visibility !== 'hidden' && !htmlEl.closest('#thermal-receipt')) {
+        hiddenElements.push({ el, display: htmlEl.style.display, visibility: htmlEl.style.visibility });
+        htmlEl.style.display = 'none';
+        htmlEl.style.visibility = 'hidden';
+      }
+    });
+    const receiptEl = document.getElementById('thermal-receipt');
+    if (receiptEl) {
+      receiptEl.style.display = 'block';
+      receiptEl.style.visibility = 'visible';
+      receiptEl.style.position = 'fixed';
+      receiptEl.style.left = '0';
+      receiptEl.style.top = '0';
+      receiptEl.style.width = '100%';
+      receiptEl.style.zIndex = '999999';
+      receiptEl.style.background = 'white';
+    }
+    window.print();
+    setTimeout(() => {
+      hiddenElements.forEach(({ el, display, visibility }) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.display = display;
+        htmlEl.style.visibility = visibility;
+      });
+      if (receiptEl) {
+        receiptEl.style.position = '';
+        receiptEl.style.left = '';
+        receiptEl.style.top = '';
+        receiptEl.style.width = '';
+        receiptEl.style.zIndex = '';
+        receiptEl.style.background = '';
+      }
+    }, 300);
+  };
+
   useEffect(() => {
     Promise.all([
       fetch('/api/sales').then(r => r.json()),
@@ -187,7 +228,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="p-4 bg-gray-50 flex flex-col gap-2 print:hidden">
-              <button onClick={() => window.print()} className="bg-green-600 text-white py-3 rounded-2xl font-bold text-sm shadow-lg active:scale-95 w-full">🖨️ Çap Et</button>
+              <button onClick={handlePrint} className="bg-green-600 text-white py-3 rounded-2xl font-bold text-sm shadow-lg active:scale-95 w-full">🖨️ Çap Et</button>
               <button onClick={() => setSelectedReceipt(null)} className="bg-gray-800 text-white py-3 rounded-2xl font-bold text-sm shadow-lg active:scale-95 w-full">Bağla</button>
             </div>
           </div>

@@ -526,85 +526,59 @@ export default function Home() {
     }
   }
 
-  const downloadReceipt = () => {
+  const handlePrint = () => {
     if (!selectedReceipt) return;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
-    const width = 400;
-    const height = 600;
-    canvas.width = width;
-    canvas.height = height;
+    // Yalnız cek divini göstər - başqa hər şeyi gizlət
+    const originalOverflow = document.body.style.overflow;
+    const allElements = document.querySelectorAll('body *');
 
-    // Fond
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
-
-    // Mətn ayarları
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 24px Courier New';
-    ctx.textAlign = 'center';
-
-    // Loqo və Başlıq
-    ctx.fillText('LAÇIN SATIŞ', width / 2, 50);
-    ctx.font = '14px Courier New';
-    ctx.fillText('---------------------------', width / 2, 70);
-    ctx.fillText(`Sifariş ID: #${selectedReceipt.id}`, width / 2, 90);
-    ctx.fillText('---------------------------', width / 2, 110);
-
-    // Məhsullar
-    ctx.textAlign = 'left';
-    ctx.font = 'bold 16px Courier New';
-    let y = 140;
-    selectedReceipt.items?.forEach(item => {
-      const itemText = `${item.name} x ${item.quantity} (${item.price.toFixed(2)} ₼)`;
-      ctx.fillText(itemText, 40, y);
-      
-      if (item.gift_quantity && item.gift_quantity > 0) {
-        ctx.fillStyle = 'green';
-        ctx.font = 'italic 12px Courier New';
-        ctx.fillText(` (+${item.gift_quantity}🎁)`, 40 + ctx.measureText(itemText).width + 5, y);
-        ctx.fillStyle = 'black';
-        ctx.font = 'bold 16px Courier New';
+    // Hər elementi yoxla və gizlə
+    const hiddenElements: { el: Element; display: string; visibility: string }[] = [];
+    allElements.forEach(el => {
+      const htmlEl = el as HTMLElement;
+      const display = htmlEl.style.display;
+      const visibility = htmlEl.style.visibility;
+      if (htmlEl.style.display !== 'none' && htmlEl.style.visibility !== 'hidden' && !htmlEl.closest('#thermal-receipt')) {
+        hiddenElements.push({ el, display, visibility });
+        htmlEl.style.display = 'none';
+        htmlEl.style.visibility = 'hidden';
       }
-
-      ctx.textAlign = 'right';
-      ctx.fillText(`${(item.price * item.quantity).toFixed(2)} ₼`, width - 40, y);
-      ctx.textAlign = 'left';
-      y += 30;
     });
 
-    if (selectedReceipt.gift_quantity > 0) {
-      ctx.fillStyle = 'green';
-      ctx.fillText(`🎁 Hədiyyə: ${selectedReceipt.gift_quantity} ədəd`, 40, y);
-      ctx.fillStyle = 'black';
-      y += 40;
+    // Cek divini tam görünən et
+    const receiptEl = document.getElementById('thermal-receipt');
+    if (receiptEl) {
+      receiptEl.style.display = 'block';
+      receiptEl.style.visibility = 'visible';
+      receiptEl.style.position = 'fixed';
+      receiptEl.style.left = '0';
+      receiptEl.style.top = '0';
+      receiptEl.style.width = '100%';
+      receiptEl.style.zIndex = '999999';
+      receiptEl.style.background = 'white';
     }
 
-    // Yekun
-    ctx.fillText('---------------------------', width / 2, y);
-    y += 30;
-    ctx.font = 'bold 22px Courier New';
-    ctx.fillText('YE K U N:', 40, y);
-    ctx.textAlign = 'right';
-    ctx.fillText(`${selectedReceipt.total_amount.toFixed(2)} ₼`, width - 40, y);
+    // Çap et
+    window.print();
 
-    // Müştəri məlumatı
-    ctx.textAlign = 'left';
-    ctx.font = '12px Courier New';
-    y += 50;
-    ctx.fillText(`Müştəri: ${selectedReceipt.customer_name}`, 40, y);
-    y += 20;
-    ctx.fillText(`Telefon: ${selectedReceipt.customer_phone}`, 40, y);
-    y += 20;
-    ctx.fillText(`Tarix: ${new Date(selectedReceipt.created_at).toLocaleString()}`, 40, y);
-
-    // Download
-    const link = document.createElement('a');
-    link.download = `cek_${selectedReceipt.id}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    // Çap bitdikdən sonra hər şeyi bərpa et
+    setTimeout(() => {
+      hiddenElements.forEach(({ el, display, visibility }) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.display = display;
+        htmlEl.style.visibility = visibility;
+      });
+      if (receiptEl) {
+        receiptEl.style.position = '';
+        receiptEl.style.left = '';
+        receiptEl.style.top = '';
+        receiptEl.style.width = '';
+        receiptEl.style.zIndex = '';
+        receiptEl.style.background = '';
+      }
+      document.body.style.overflow = originalOverflow;
+    }, 300);
   };
 
   const addToBasket = (product: Product) => {
@@ -1696,7 +1670,7 @@ export default function Home() {
               </div>
 
               <div className="p-4 bg-black/5 flex flex-col gap-2 no-print">
-                <button onClick={() => window.print()} className="bg-green-600 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95 w-full">🖨️ Çap Et</button>
+                <button onClick={handlePrint} className="bg-green-600 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95 w-full">🖨️ Çap Et</button>
                 {role === 'admin' && (
                   <button onClick={() => deleteSale(selectedReceipt.id)} className="bg-red-500 text-white py-3 rounded-2xl font-bold text-xs shadow-lg active:scale-95 w-full">❌ Sifarişi Ləğv Et (Sil)</button>
                 )}

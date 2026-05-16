@@ -111,8 +111,8 @@ export default function CustomersPage() {
     : filterDebt === 'debtors' ? pins.filter(p => p.debt > 0)
     : pins.filter(p => p.debt <= 0);
 
-  const totalDebt = enriched.reduce((a, c) => a + c.stats.debt, 0);
-  const debtorCount = enriched.filter(c => c.stats.debt > 0).length;
+  const totalDebt = useMemo(() => enriched.reduce((a, c) => a + c.stats.debt, 0), [enriched]);
+  const debtorCount = useMemo(() => enriched.filter(c => c.stats.debt > 0).length, [enriched]);
 
   return (
     <div className="space-y-4">
