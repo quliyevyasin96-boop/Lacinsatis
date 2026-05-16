@@ -81,6 +81,20 @@ export default function Dashboard() {
         <KpiCard label="Xərclər" value={`${totalExpenses.toFixed(2)} ₼`} sub={`${expenses.length} qeyd`} color="text-purple-500" />
       </div>
 
+      {/* Kuryer İzləmə */}
+      <Link href="/admin/tracking">
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-5 flex items-center justify-between shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all cursor-pointer active:scale-[0.98]">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">🗺️</div>
+            <div>
+              <h3 className="text-white font-black text-base">Kuryer İzləmə</h3>
+              <p className="text-orange-100 text-xs">Ekspeditorların real vaxt lokasiyası</p>
+            </div>
+          </div>
+          <div className="text-white text-2xl">→</div>
+        </div>
+      </Link>
+
       {/* Recent sales table */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">

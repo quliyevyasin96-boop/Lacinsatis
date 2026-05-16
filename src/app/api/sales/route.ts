@@ -2,9 +2,27 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import db, { Sale, generateSaleText } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const sales = await (db.prepare('SELECT * FROM sales') as any).all();
+    const { searchParams } = new URL(request.url);
+    const expertId = searchParams.get('expert_id');
+
+    let sales = await (db.prepare('SELECT * FROM sales') as any).all();
+
+    // Ekspeditor özü daxil olubsa, yalnız öz satışlarını göstər
+    if (expertId) {
+      const adminIds = (process.env.ADMIN_IDS || '').split(',').map(id => id.trim());
+      const isAdmin = adminIds.includes(expertId);
+      
+      // Admin olmayan ekspeditor yalnız öz satışlarını görür
+      if (!isAdmin) {
+        sales = sales.filter((sale: Sale) => 
+          sale.expert_id && String(sale.expert_id) === String(expertId)
+        );
+      }
+      // Admin olduqda bütün satışları görür — filter yoxdur
+    }
+
     return NextResponse.json(sales);
   } catch (error) {
     console.error('Sales GET error:', error);

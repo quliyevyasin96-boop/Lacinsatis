@@ -18,6 +18,8 @@ interface Customer {
   address?: string;
   lat?: number | null;
   lon?: number | null;
+  expert_id?: number | null;
+  expert_name?: string | null;
 }
 
 interface Sale {
@@ -39,6 +41,13 @@ export default function CustomersPage() {
   const [filterDebt, setFilterDebt] = useState<'all' | 'debtors' | 'paid'>('all');
   const [view, setView] = useState<'list' | 'map'>('list');
   const [locationPickerCustomer, setLocationPickerCustomer] = useState<{ id: number | string; name: string } | null>(null);
+
+  // Migration state
+  const [showMigration, setShowMigration] = useState(false);
+  const [migrateId, setMigrateId] = useState('');
+  const [migrateName, setMigrateName] = useState('');
+  const [migrating, setMigrating] = useState(false);
+  const [migrateResult, setMigrateResult] = useState<{ total: number; updated: number; added: number; expert_id: number } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -125,6 +134,90 @@ export default function CustomersPage() {
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Xəritədə</div>
           <div className="text-2xl font-black text-orange-500 mt-1">{pins.length}</div>
         </div>
+      </div>
+
+      {/* Miqrasiya paneli */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-bold text-sm text-blue-700">🔄 Ekspeditor Miqrasiyası</h3>
+            <p className="text-xs text-blue-400 mt-0.5">Köhnə marketlərə expert_id bağlamaq üçün</p>
+          </div>
+          <button
+            onClick={() => setShowMigration(!showMigration)}
+            className="px-4 py-2 bg-blue-500 text-white rounded-xl text-xs font-bold active:scale-95"
+          >
+            {showMigration ? 'Bağla' : 'İşlət'}
+          </button>
+        </div>
+        {showMigration && (
+          <div className="bg-white rounded-xl p-4 border border-blue-100 space-y-3">
+            <p className="text-xs text-gray-500">Bütün köhnə marketlərə (expert_id olmayanlara) seçilmiş ekspeditor ID-si yazılacaq.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Ekspeditor ID</label>
+                <input
+                  type="number"
+                  value={migrateId}
+                  onChange={e => setMigrateId(e.target.value)}
+                  placeholder="5090683511"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Ekspeditor Adı (opsional)</label>
+                <input
+                  type="text"
+                  value={migrateName}
+                  onChange={e => setMigrateName(e.target.value)}
+                  placeholder="Ad Soyad"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                if (!migrateId) return;
+                setMigrating(true);
+                setMigrateResult(null);
+                try {
+                  const res = await fetch('/api/migrate-customers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ expert_id: parseInt(migrateId), expert_name: migrateName || null }),
+                  });
+                  const data = await res.json();
+                  setMigrateResult(data);
+                  if (data.success) {
+                    // Yenidən yüklə
+                    const [c, s] = await Promise.all([
+                      fetch('/api/customers').then(r => r.json()),
+                      fetch('/api/sales').then(r => r.json()),
+                    ]);
+                    setCustomers(Array.isArray(c) ? c : []);
+                    setSales(Array.isArray(s) ? s : []);
+                  }
+                } catch (err) {
+                  console.error(err);
+                } finally {
+                  setMigrating(false);
+                }
+              }}
+              disabled={migrating || !migrateId}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm active:scale-95 disabled:opacity-50"
+            >
+              {migrating ? 'İşləyir...' : '✅ Miqrasiya Et'}
+            </button>
+            {migrateResult && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs space-y-1">
+                <p className="font-bold text-green-700">✅ Miqrasiya tamamlandı!</p>
+                <p>📋 Ümumi: {migrateResult.total} müştəri</p>
+                <p>🔄 Yenilənən: {migrateResult.updated} müştəri</p>
+                <p>👤 Ekspeditor ID: {migrateResult.expert_id}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Filters + view toggle */}

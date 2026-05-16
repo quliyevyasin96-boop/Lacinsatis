@@ -11,6 +11,7 @@ export const SALES_KEY = 'sales';
 export const EXPENSES_KEY = 'expenses';
 export const CUSTOMERS_KEY = 'customers';
 export const SALE_ID_COUNTER = 'sale_id_counter';
+export const COURIER_LOCATIONS_KEY = 'courier_locations';
 
 export interface Product {
   id: number;
@@ -34,6 +35,8 @@ export interface Customer {
   lat?: number | null;
   lon?: number | null;
   created_at: string;
+  expert_id?: number | null;
+  expert_name?: string | null;
 }
 
 export interface Sale {

@@ -245,7 +245,13 @@ export default function Home() {
 
   async function fetchAllSales() {
     try {
-      const res = await fetch('/api/sales');
+      const tg = (window as any).Telegram?.WebApp;
+      const userId = tg?.initDataUnsafe?.user?.id;
+      let url = '/api/sales';
+      if (userId) {
+        url = `/api/sales?expert_id=${userId}`;
+      }
+      const res = await fetch(url);
       const data = await res.json();
       setAllSales(data);
     } catch {
@@ -265,7 +271,10 @@ export default function Home() {
 
   async function fetchCustomers() {
     try {
-      const res = await fetch('/api/customers');
+      const tg = (window as any).Telegram?.WebApp;
+      const userId = tg?.initDataUnsafe?.user?.id;
+      const url = userId ? `/api/customers?expert_id=${userId}` : '/api/customers';
+      const res = await fetch(url);
       const data = await res.json();
       setCustomers(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -426,10 +435,21 @@ export default function Home() {
     if (!regMarketName || !regMarketPhone) return;
     setLoading(true);
     try {
+      const tg = (window as any).Telegram?.WebApp;
+      let userName = 'Naməlum';
+      if (tg?.initDataUnsafe?.user) {
+        const u = tg.initDataUnsafe.user;
+        userName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || `ID: ${u.id}`;
+      }
       const res = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: regMarketName, phone: regMarketPhone, lat: regMarketLocation?.lat || null, lon: regMarketLocation?.lon || null }),
+        body: JSON.stringify({
+          name: regMarketName, phone: regMarketPhone,
+          lat: regMarketLocation?.lat || null, lon: regMarketLocation?.lon || null,
+          tg_user_id: tg?.initDataUnsafe?.user?.id,
+          userName: userName
+        }),
       });
       if (res.ok) {
         setRegMarketName(''); setRegMarketPhone(''); setRegMarketLocation(null);
